@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>㎡ ↔ 평 변환 계산기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      overflow: hidden;
+    }
+    .calculator {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      max-height: 700px;
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    h1 {
+      color: #333;
+      font-size: 1.4em;
+      text-align: center;
+      margin: 10px 0;
+    }
+    #inputDisplay {
+      width: 100%;
+      height: 55px;
+      font-size: 24px;
+      text-align: right;
+      padding: 0 15px;
+      border: 3px solid #ddd;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      font-family: monospace;
+    }
+    #direction,
+    #result {
+      width: 100%;
+      padding: 8px 10px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    #result {
+      font-size: 24px;
+      color: #667eea;
+      font-weight: bold;
+      background: #f0f8ff;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 10px;
+      flex: 1;
+    }
+    button {
+      height: 100%;
+      font-size: 24px;
+      border: none;
+      border-radius: 12px;
+      background: #f8f9fa;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button:active { transform: scale(0.95); background: #e9ecef; }
+    .btn-main { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    .btn-num  { background: #f8f9fa; }
+    .btn-dot  { background: #28a745; color: white; }
+    .btn-precision { background: #17a2b8; color: white; }
+    .haptic-toggle-btn {
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+      font-size: 18px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .haptic-status {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 12px; height: 12px;
+      background: #fff;
+      border: 1.5px solid #28a745;
+      border-radius: 50%;
+      font-size: 8px;
+      display: none;
+    }
+    .haptic-on .haptic-status { display: flex; align-items: center; justify-content: center; content: '●'; }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <h1>📏 ㎡ ↔ 평 변환기</h1>
+
+    <input type="text" id="inputDisplay" placeholder="0" readonly>
+    <select id="direction">
+      <option value="m2_to_pyeong">㎡ → 평</option>
+      <option value="pyeong_to_m2">평 → ㎡</option>
+    </select>
+    <div id="result">결과: 0</div>
+
+    <div class="keypad">
+      <button class="btn-main" onclick="clearDisplay()">C</button>
+      <button class="btn-main" onclick="deleteLastDigit()">⌫</button>
+      <button class="btn-main" onclick="toggleMinus()">±</button>
+      <button class="btn-main" onclick="switchConversion()">↔</button>
+
+      <button class="btn-num" onclick="addDigit(7)">7</button>
+      <button class="btn-num" onclick="addDigit(8)">8</button>
+      <button class="btn-num" onclick="addDigit(9)">9</button>
+      <button class="btn-precision" onclick="increasePrecision()">소수↑</button>
+
+      <button class="btn-num" onclick="addDigit(4)">4</button>
+      <button class="btn-num" onclick="addDigit(5)">5</button>
+      <button class="btn-num" onclick="addDigit(6)">6</button>
+      <button class="btn-precision" onclick="decreasePrecision()">소수↓</button>
+
+      <button class="btn-num" onclick="addDigit(1)">1</button>
+      <button class="btn-num" onclick="addDigit(2)">2</button>
+      <button class="btn-num" onclick="addDigit(3)">3</button>
+      <button class="btn-dot" onclick="addDecimalPoint()">.</button>
+
+      <button class="btn-num" style="grid-column: span 3;" onclick="addDigit(0)">0</button>
+      <button class="haptic-toggle-btn" onclick="toggleHaptic()">
+        햅틱
+        <div class="haptic-status" id="hapticStatus">●</div>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let value = "0";
+    let precision = 2;
+    let hapticEnabled = false;
+    const input = document.getElementById("inputDisplay");
+    const direction = document.getElementById("direction");
+    const result = document.getElementById("result");
+    const hapticStatus = document.getElementById("hapticStatus");
+
+    function updateResult() {
+      const n = parseFloat(value);
+      if (isNaN(n) || n === 0) {
+        result.textContent = "결과: 0";
+        return;
+      }
+
+      const SQM_TO_PY = 1 / 3.305785;
+      const factor = direction.value === "m2_to_pyeong" ? SQM_TO_PY : 1 / SQM_TO_PY;
+      const unit = direction.value === "m2_to_pyeong" ? "평" : "㎡";
+      const converted = n * factor;
+      const fixed = converted.toFixed(precision);
+      result.innerHTML = `결과: <strong>${fixed} ${unit}</strong>`;
+    }
+
+    function addDigit(d) {
+      if (value === "0") value = d;
+      else value += d;
+      input.value = value;
+      updateResult();
+    }
+
+    function addDecimalPoint() {
+      if (!value.includes(".")) {
+        if (value === "0") value = "0.";
+        else value += ".";
+      }
+      input.value = value;
+      updateResult();
+    }
+
+    function clearDisplay() {
+      value = "0";
+      input.value = "";
+      updateResult();
+    }
+
+    function deleteLastDigit() {
+      if (value.length > 1) value = value.slice(0, -1);
+      else value = "0";
+      input.value = value;
+      updateResult();
+    }
+
+    function toggleMinus() {
+      if (value !== "0") {
+        if (value.startsWith("-")) value = value.slice(1);
+        else value = "-" + value;
+      }
+      input.value = value;
+      updateResult();
+    }
+
+    function switchConversion() {
+      updateResult();
+    }
+
+    function increasePrecision() {
+      precision = Math.min(precision + 1, 6);
+      updateResult();
+    }
+
+    function decreasePrecision() {
+      precision = Math.max(precision - 1, 0);
+      updateResult();
+    }
+
+    function toggleHaptic() {
+      hapticEnabled = !hapticEnabled;
+      document.querySelector(".haptic-toggle-btn").classList.toggle("haptic-on");
+      hapticStatus.style.display = hapticEnabled ? "flex" : "none";
+    }
+
+    function vibrate(duration) {
+      if (hapticEnabled && navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+
+    // 터치 시 햅틱
+    document.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => vibrate(20), { passive: true });
+    });
+
+    updateResult();
+  </script>
+</body>
+</html>
