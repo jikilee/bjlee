@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>㎡ ↔ 평 변환 계산기 (전체화면)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .calculator { 
+            width: 100%; 
+            max-width: 480px; 
+            height: 100%; 
+            max-height: 700px; 
+            background: white; 
+            border-radius: 20px; 
+            padding: 15px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between;
+        }
+        h1 { 
+            color: #333; 
+            margin: 10px 0; 
+            font-size: 1.4em; 
+            text-align: center;
+            padding: 5px 0;
+            border-bottom: 2px dashed #ddd;
+            margin-bottom: 10px;
+        }
+        #inputDisplay { 
+            width: 100%; 
+            height: 55px; 
+            font-size: 24px; 
+            text-align: right; 
+            padding: 0 15px; 
+            border: 3px solid #ddd; 
+            border-radius: 12px; 
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            font-family: monospace;
+        }
+        #direction { 
+            width: 100%; 
+            height: 50px; 
+            font-size: 18px; 
+            border: 2px solid #ddd; 
+            border-radius: 10px; 
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        #result { 
+            font-size: 26px; 
+            color: #667eea; 
+            font-weight: bold; 
+            padding: 15px; 
+            background: #f0f8ff; 
+            border-radius: 12px; 
+            margin-bottom: 10px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .keypad { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            grid-template-rows: repeat(5, 1fr);
+            gap: 10px; 
+            flex: 1; 
+        }
+        button { 
+            height: 100%; 
+            font-size: 28px; 
+            font-weight: bold;
+            border: none; 
+            border-radius: 16px; 
+            background: #f8f9fa; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:active { 
+            transform: scale(0.95); 
+            background: #e9ecef;
+        }
+        button.haptic-on:active { background: #d4edda !important; }
+        button:hover { background: #e9ecef; }
+        .calc-btn { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: white; font-size: 26px; }
+        .calc-btn:active { background: linear-gradient(135deg, #5a67d8, #6b46c1) !important; }
+        .number-btn { background: linear-gradient(135deg, #f8f9fa, #e9ecef); }
+        .decimal-btn { background: #28a745 !important; color: white; font-size: 28px; }
+        .precision-btn { background: #17a2b8 !important; color: white; font-size: 20px; }
+        .haptic-toggle-btn { 
+            background: linear-gradient(135deg, #28a745, #20c997) !important; 
+            color: white; 
+            font-size: 18px; 
+            font-weight: 600;
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center;
+            gap: 2px;
+            position: relative;
+        }
+        .haptic-toggle-btn.haptic-on { 
+            background: linear-gradient(135deg, #155724, #1e7e34) !important; 
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+        }
+        .haptic-status {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            border: 1.5px solid #28a745;
+            font-size: 8px;
+            line-height: 10px;
+            display: none;
+            animation: pulse 1s infinite;
+        }
+        .haptic-on .haptic-status { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            content: '●';
+        }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @media (max-width: 480px) {
+            .calculator { padding: 10px; }
+            h1 { font-size: 1.2em; margin: 5px 0; }
+            #inputDisplay { height: 50px; font-size: 22px; }
+            #direction { height: 45px; font-size: 16px; }
+            #result { font-size: 22px; padding: 10px; min-height: 50px; }
+            button { font-size: 24px; }
+            .calc-btn, .decimal-btn { font-size: 22px; }
+            .haptic-toggle-btn { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="top-section">
+            <h1>📏 ㎡ ↔ 평 변환기</h1>
+            <input type="text" id="inputDisplay" placeholder="0" readonly value="">
+            <select id="direction">
+                <option value="m2_to_pyeong">㎡ → 평</option>
+                <option value="pyeong_to_m2">평 → ㎡</option>
+            </select>
+            <div id="result">결과: 0</div>
+        </div>
+        <div class="keypad">
+            <button class="calc-btn haptic-toggle" onclick="clearDisplay()">C</button>
+            <button class="calc-btn haptic-toggle" onclick="deleteLastDigit()">⌫</button>
+            <button class="calc-btn haptic-toggle" onclick="toggleMinus()">±</button>
+            <button class="calc-btn haptic-toggle" onclick="switchConversion()">↔</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(7)">7</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(8)">8</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(9)">9</button>
+            <button class="precision-btn haptic-toggle" onclick="increasePrecision()">소수↑</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(4)">4</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(5)">5</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(6)">6</button>
+            <button class="precision-btn haptic-toggle" onclick="decreasePrecision()">소수↓</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(1)">1</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(2)">2</button>
+            <button class="number-btn haptic-toggle" onclick="addDigit(3)">3</button>
+            <button class="decimal-btn haptic-toggle" onclick="addDecimalPoint()">.</button>
+            <button class="number-btn haptic-toggle" style="grid-column: 1 / span 3;" onclick="addDigit(0)">0</button>
+            <button class="haptic-toggle-btn" id="hapticToggle">
+                햅틱
+                <div class="haptic-status" id="hapticIndicator">●</div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let displayValue = '0';
+        let precision = 2;
+        let hapticEnabled = false;
+        const inputField = document.getElementById('inputDisplay');
+        const unitSelect = document.getElementById('direction');
+        const resultField = document.getElementById('result');
+        const hapticToggle = document.getElementById('hapticToggle');
+        const hapticIndicator = document.getElementById('hapticIndicator');
+        const SQ_M_TO_PYEONG = 1 / 3.305785;
+
+        function triggerHaptic(intensity = 20) {
+            if (hapticEnabled && 'vibrate' in navigator) {
+                navigator.vibrate(intensity);
+            }
+        }
+
+        // 모든 버튼에 햅틱 적용
+        document.querySelectorAll('.haptic-toggle').forEach(btn => {
+            btn.addEventListener('click', () => triggerHaptic(20));
+            btn.addEventListener('touchstart', (e) => {
+                if (hapticEnabled) {
+                    btn.classList.add('haptic-on');
+                    triggerHaptic(10);
+                }
+            });
+            btn.addEventListener('touchend', () => {
+                setTimeout(() => btn.classList.remove('haptic-on'), 100);
+            });
+        });
+
+        hapticToggle.addEventListener('click', toggleHapticMode);
+
+        function toggleHapticMode() {
+            hapticEnabled = !hapticEnabled;
+            hapticToggle.classList.toggle('haptic-on');
+
+            // 토글 시 강한 햅틱
+            triggerHaptic(hapticEnabled ? 50 : 30);
+
+            console.log('햅틱 상태:', hapticEnabled ? 'ON' : 'OFF');
+        }
+
+        function updateDisplay() {
+            inputField.value = displayValue;
+            updateResult();
+        }
+
+        function addDigit(d) {
+            if (displayValue === '0') {
+                displayValue = d.toString();
+            } else {
+                displayValue += d.toString();
+            }
+            updateDisplay();
+        }
+
+        function addDecimalPoint() {
+            if (!displayValue.includes('.')) {
+                if (displayValue === '0') {
+                    displayValue = '0.';
+                } else {
+                    displayValue += '.';
+                }
+            }
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            displayValue = '0';
+            updateDisplay();
+        }
+
+        function deleteLastDigit() {
+            if (displayValue.length > 1) {
+                displayValue = displayValue.slice(0, -1);
+            } else {
+                displayValue = '0';
+            }
+            updateDisplay();
+        }
+
+        function toggleMinus() {
+            if (displayValue !== '0') {
+                if (displayValue.startsWith('-')) {
+                    displayValue = displayValue.slice(1);
+                } else {
+                    displayValue = '-' + displayValue;
+                }
+            }
+            updateDisplay();
+        }
+
+        function switchConversion() {
+            const options = unitSelect.options;
+            unitSelect.selectedIndex = 1 - unitSelect.selectedIndex;
+            updateResult();
+        }
+
+        function increasePrecision() {
+            precision = Math.min(precision + 1, 6);
+            updateResult();
+        }
+
+        function decreasePrecision() {
+            precision = Math.max(precision - 1, 0);
+            updateResult();
+        }
+
+        function updateResult() {
+            const num = parseFloat(displayValue);
+            if (isNaN(num) || num === 0) {
+                resultField.textContent = '결과: 0';
+                return;
+            }
+
+            let converted, unitName;
+            if (unitSelect.value === 'm2_to_pyeong') {
+                converted = num * SQ_M_TO_PYEONG;
+                unitName = '평';
+            } else {
+                converted = num / SQ_M_TO_PYEONG;
+                unitName = '㎡';
+            }
+
+            const formatted = converted.toFixed(precision);
+            resultField.innerHTML = `결과: <strong>${formatted} ${unitName}</strong>`;
+        }
+
+        // 페이지 최적화
+        if (window.innerWidth > 480 && window.innerHeight < 600) {
+            document.body.style.overflow = 'auto';
+        }
+
+        // 초기화
+        updateDisplay();
+    </script>
+</body>
+</html>
